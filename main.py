@@ -7,7 +7,7 @@ token = 'your_token_bot'
 
 openai.api_key = 'your_api_key'
 
-previous_message = ""
+memory = {}
 
 bot = Bot(token)
 dp = Dispatcher(bot)
@@ -21,19 +21,23 @@ async def cmd_start_help(message: types.Message):
 
 @dp.message_handler(commands=['clear'])
 async def cmd_clear(message: types.Message):
-  global previous_message
-  previous_message = ""
+  user_id = message.from_user.id
+  memory[user_id] = ""
   await message.answer("История запросов очищенна!!!")
 
 @dp.message_handler()
 async def send(message : types.Message):
     with open("log.txt", "a") as f:
       f.write(f"{message.from_user.id} : {message.text}\n")
-    global previous_message
-    previous_message = previous_message + message.text + "\n"
+    user_id = message.from_user.id
+    if user_id not in memory:
+        # Добавляем пользователя в словарь, если его там еще нет
+        memory[user_id] = "" 
+    # Обновляем историю запросов
+    memory[user_id] = memory[user_id] + message.text + "\n"
     response = openai.Completion.create(
       model="text-davinci-003",
-      prompt=previous_message,
+      prompt=memory[user_id],
       temperature=0.9,
       max_tokens=1000,
       top_p=1,
